@@ -1,40 +1,47 @@
 +++
-title = "Thiết lập Tài Khoản AWS"
+title = "Giới thiệu"
 date = 2021
 weight = 1
 chapter = false
 +++
 
-# Tạo tài khoản AWS đầu tiên
-
-#### Tổng quan
-Trong bài lab đầu tiên này, bạn sẽ tạo mới **tài khoản AWS** đầu tiên của mình, tạo **MFA** (Multi-factor Authentication) để gia tăng bảo mật tài khoản của bạn. Bước tiếp theo bạn sẽ tạo **Admin Group**, **Admin User** để quản lý quyền truy cập vào các tài nguyên trong tài khoản của mình thay vì sử dụng user root.\
-Cuối cùng, nếu quá trình xác thực tài khoản của bạn có vấn đề, bạn sẽ được hướng dẫn hỗ trợ xác thực tài khoản với **AWS Support**.
-
-#### Tài khoản AWS (AWS Account)
-**Tài khoản AWS** là phương tiện để bạn có thể truy cập và sử dụng những tài nguyên và dịch vụ của AWS. Theo mặc định, mỗi tài khoản AWS sẽ có một *root user*. *Root user* có toàn quyền với tài khoản AWS của bạn, và quyền hạn của root user không thể bị giới hạn. Nếu bạn mới sử dụng tài khoản AWS lần đầu tiên, bạn sẽ truy cập vào tài khoản dưới danh nghĩa của *root user*.
+# Triển khai ứng dụng với CI/CD Pipeline trên Amazon Elastic Container Service
 
 {{% notice note %}}
-Chính vì quyền hạn của **root user** không thể bị giới hạn, AWS khuyên bạn không nên sử dụng trực tiếp *root user* cho bất kỳ công tác nào. Thay vào đó, bạn nên tạo ra một *IAM User* và trao quyền quản trị cho *IAM User* đó để dễ dàng quản lý và giảm thiểu rủi ro.
+Bài thực hành này yêu cầu bạn đã thực hiện bài thực hành [Triển khai ứng dụng trên ECS](https://000016.awsstudygroup.com/). Việc triển khai thử ứng dụng lên ECS sẽ làm tiền đề để áp dụng CI/CD Pipeline vào việc khởi xây dựng và triển khai ứng dụng một các tự động.
 {{% /notice %}}
 
-#### MFA (Multi-factor Authentication)
-**MFA** là một tính năng được sử dụng để gia tăng bảo mật của tài khoản AWS. Nếu MFA được kích hoạt, bạn sẽ phải nhập mã OTP (One-time Password) mỗi lần bạn đăng nhập vào tài khoản AWS.
+#### Amazon Elastic Container Service (ECS)
+**Amazon ECS** là dịch vụ quản lý **container** với khả năng mở rộng cao cho phép đơn giản hóa việc chạy, ngừng chạy và quản lý các container trong cluster. Container sẽ được định nghĩa trong các task definition nhằm chạy các task đơn lẻ hoặc nhiều task trong một service.
 
-#### IAM Group 
-**IAM Group**  là một công cụ quản lý người dùng (*IAM User*) của AWS. Một IAM Group có thể chứa nhiều IAM User. Các IAM User ở trong một IAM Group đều hưởng chung quyền hạn mà IAM Group đó được gán cho.
+#### CI/CD Pipeline là gì?
+CI/CD Pipeline (Continuous Integration/Continuous Delivery or Continuous Deployment Pipeline) là một quy trình tự động hóa giúp tích hợp, kiểm thử và triển khai phần mềm một cách liên tục. CI/CD Pipeline là một phần quan trọng của DevOps, giúp đội ngũ phát triển và vận hành phần mềm làm việc hiệu quả hơn bằng tự động hóaTự động hóa, phát hiện lỗi sớm, triển khai nhanh chóng, cải thiện chất lượng phần mềm.
 
-#### IAM User
-**IAM User** là một đơn vị người dùng của AWS. Khi bạn đăng nhập vào AWS, bạn sẽ phải đăng nhập dưới danh nghĩa của một IAM User. Nếu bạn mới đăng nhập vào AWS lần đầu tiên, bạn sẽ đăng nhập dưới danh nghĩa của *root user* (tạm dịch là người dùng gốc). Ngoài *root user* ra, bạn có thể tạo ra nhiều IAM User khác để cho phép người khác truy cập **dài hạn** vào tài nguyên AWS trong tài khoản AWS của bạn.
+#### Nội dung cần làm
+Sau khi xây dựng và thực thi Service trong một Cluster, chúng ta có thể thực hiện các yêu cầu thay đổi liên quan đến cấu hình như số lượng Tasks, bổ sung hoặc thay đổi Containers cùng những giá trị CPU, Memory… bên trong Task Definition Revision.
 
+Để thực hiện những thay đổi này, ECS cung cấp 3 phương pháp sau:
+Rolling update: thực thi bởi ECS, sử dụng service scheduler để cập nhật phiên bản mới của Container. Trong quá trình cập nhật, số lượng Tasks thêm vào hoặc loại bỏ được cấu hình thông qua những giá trị:
 
-#### AWS Support
-**AWS Support** là một đơn vị cung cấp các dịch vụ hỗ trợ khách hàng của AWS.
+Minimum healthy percent: giá trị cận dưới của Tasks cần duy trì ở trạng thái RUNNING / so với Tasks mong muốn (khai báo trong Auto Scaling).
+Maximum percent: giá trị cận trên của Tasks cần duy trì ở trạng thái RUNNING hoặc PENDING / so với Tasks mong muốn (khai báo trong Auto Scaling).
+Blue/Green: thực thi bởi CodeDeploy, duy trì hai phiên bản: product (BLUE) / test (GREEN). Trong quá trình triển khai, lưu lượng dữ liệu gửi đến servie dần dịch chuyển từ BLUE sang GREEN theo một trong những cách thức:
+
+Canary: chia lưu lượng thành 2 phần và xác định khoảng thời gian thực thi quá trình chuyển đổi. Ví dụ:
+CodeDeployDefault.ECSCanary10Percent5Minutes: chuyển 10% trong phần đầu tiên, và 90% còn lại sau 5 phút.
+CodeDeployDefault.ECSCanary10Percent15Minutes: chuyển 10% trong phần đầu tiên, và 90% còn lại sau 15 phút.
+Linear: chia lưu lượng thành các phần bằng nhau và xác định khoảng thời gian. Ví dụ:
+CodeDeployDefault.ECSLinear10PercentEvery1Minutes: chuyển 10% sau mỗi 1 phút cho đến khi kết thúc toàn bộ.
+CodeDeployDefault.ECSLinear10PercentEvery3Minutes: chuyển 10% sau mỗi 3 phút cho đến khi kết thúc toàn bộ.
+All-at-one: Toàn bộ lưu lượng được chuyển dịch từ BLUE sang GREEN cùng lúc.
+External: thực thi bởi deployment controller từ một bên thứ ba (third-party) dựa trên các Service/Task APIs.
 
 
 #### Nội dung chính
 
-1. [Tạo tài khoản AWS](1-create-new-aws-account/)
-2. [Thiết lập MFA cho tài khoản AWS (Root)](2-mfa-setup-for-aws-user-(root)/)
-3. [Tài khoản và Nhóm Admin](3-create-admin-user-and-group/)
-4. [Hỗ trợ Xác thực Tài khoản](4-verify-new-account/)
+1. [Các bước chuẩn bị](1-create-new-aws-account/)
+2. [Tạo AWS Gitlab](2-mfa-setup-for-aws-user-(root)/)
+3. [Tạo CodeBuild](3-create-admin-user-and-group/)
+4. [Tạo CodePipeline](4-verify-new-account/)
+5. [Khắc phục lỗi](4-verify-new-account/)
+6. [Dọn dẹp tài nguyên](4-verify-new-account/)
